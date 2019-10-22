@@ -1,0 +1,17 @@
+Create database now_playing;
+
+CREATE TABLE `presenter` (
+  `presenter_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `metadata` varchar(256) NOT NULL,
+  PRIMARY KEY (`presenter_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `presenter_diary` (
+  `presenter_diary_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `start` time DEFAULT NULL,
+  `end` time DEFAULT NULL,
+  `day` int(1) NOT NULL,
+  `presenter_id` int(11) unsigned NOT NULL,
+  `metadata` varchar(256) NOT NULL,
+  PRIMARY KEY (`presenter_diary_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
