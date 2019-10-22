@@ -13,8 +13,16 @@ import socket
 import logging
 import os
 import sys
+import time
+import signal
 
 from optparse import OptionParser
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#---------------------------------------------------------------------------
+def signal_handler(sig, frame):
+  print "Exiting due to control-c"
+  sys.exit(0)
 
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -42,11 +50,16 @@ def custom_logger(name, logger_level):
 def send_now_playing(logger, now_playing_data):
 
   path, track_id, artist, title, album, album_cover, year, track_no, disc_no, bpm, rotation_name, rotation_id, duration_in_seconds, track_type, subcat_id, genre_id = now_playing_data.split('^')
-  logger.info("Playing '%s' by '%s' it is %s seconds long" % (title, artist, duration_in_seconds))
+  logger.info("Sending '%s' by '%s' it is %s seconds long" % (title, artist, duration_in_seconds))
+
+  if duration_in_seconds <= 5:
+    return 0
+  else:
+    return duration_in_seconds
 
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# This is the child process.
+# This is the start of child process.
 #---------------------------------------------------------------------------
 def now_playing(radiodj_addr, now_playing_socket, radiodj, logger):
 
@@ -99,8 +112,17 @@ def now_playing(radiodj_addr, now_playing_socket, radiodj, logger):
   (radiodj_host, radiodj_domain, radiodj_suffix) = tldextract.extract(radiodj_fqdn)
 
   if radiodj_host == active_studio:
-    logger.debug("Connection from active studio|||")
-    send_now_playing(logger, now_playing_data)
+    logger.debug("Connection from active studio!!!")
+
+#+
+#If the time to wait is  short, we return 0, if the time is short we don't really want to do do anything.
+#This is to get rid of small fillers and bumpers
+#-
+    time_to_wait = float(send_now_playing(logger, now_playing_data))
+    if time_to_wait > 0:
+      logger.debug('Going to wait for %s seconds' % time_to_wait)
+      time.sleep(time_to_wait)
+      logger.debug('Sending **CLEAR**')
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #---------------------------------------------------------------------------
@@ -119,6 +141,12 @@ def main():
 #Setup custom logging
   logger = custom_logger('now_playing', options.logger_level)
   logger.info("Hello world!")
+  logger.debug("Sending CoastFM")
+
+#+
+#Catch control-c
+#-
+  signal.signal(signal.SIGINT, signal_handler)
 
 #bind to the now_playing port
   now_playing_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -147,6 +175,7 @@ def main():
     child_pid = os.fork()
     if child_pid == 0:
       now_playing(addr, now_playing_socket, radiodj, logger)
+      logger.debug("Exiting Child")
       sys.exit(0)
   
 
