@@ -47,16 +47,41 @@ def custom_logger(name, logger_level):
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # We have now playing data for the active studio
 #---------------------------------------------------------------------------
-def send_now_playing(logger, now_playing_data):
+def send_now_playing(logger, now_playing_data, db):
 
   path, track_id, artist, title, album, album_cover, year, track_no, disc_no, bpm, rotation_name, rotation_id, duration_in_seconds, track_type, subcat_id, genre_id = now_playing_data.split('^')
-  logger.info("Sending '%s' by '%s' it is %s seconds long" % (title, artist, duration_in_seconds))
+  logger.debug("Of interest is... '%s' by '%s' it is %s seconds long" % (title, artist, duration_in_seconds))
 
-  if duration_in_seconds <= 5:
-    return 0
+#+
+#Lets get some data from the DB about the track
+#-
+  c = db.cursor()
+
+  sql = "select s.song_type from songs s, song_type st where st.id = s.song_type and s.id = %s" % track_id
+  try:
+    c.execute(sql)
+  except MySQLdb.Error, err:
+    logger.error("Error %d: %s" % (err.args[0], err.args[1]))
+    logger.error("sql = '%s'" % sql)
+    sys.exit(1)
+  
+  song_type = c.fetchone()[0]
+  logger.debug("This is a '%s' type" % song_type)
+
+  if song_type == 0:
+    metadata_to_send = "title=%s artist=%s" % (title, artist)
   else:
-    return duration_in_seconds
+    sql = "select metadata from presenters_diary where now() between start and end and day in (dayofweek(current_time()), 0) order by priority limit 1"
+    try:
+      c.execute(sql)
+    except MySQLdb.Error, err:
+      logger.error("Error %d: %s" % (err.args[0], err.args[1]))
+      sys.exit(1)
 
+    logger.error("sql = '%s'" % sql)
+    metadata_to_send = c.fetchone()[0]
+
+  logger.info("Sending metadata '%s'" % metadata_to_send)
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # This is the start of child process.
@@ -66,6 +91,8 @@ def now_playing(radiodj_addr, now_playing_socket, radiodj, logger):
   (radiodj_ip, radiodj_port) = radiodj_addr
 
   (radiodj_fqdn, junk, junk) = socket.gethostbyaddr(radiodj_ip)
+
+  logger.debug("")
   logger.debug("Connection from '%s': fqdn = '%s'" % (radiodj_ip, radiodj_fqdn))
 
   (radiodj_host, radiodj_domain, radiodj_suffix) = tldextract.extract(radiodj_fqdn)
@@ -106,7 +133,6 @@ def now_playing(radiodj_addr, now_playing_socket, radiodj, logger):
 
   active_studio_row = c.fetchone()
   active_studio = active_studio_row[0]
-  db.close()
 
   (radiodj_fqdn, junk, junk) = socket.gethostbyaddr(radiodj_ip)
   (radiodj_host, radiodj_domain, radiodj_suffix) = tldextract.extract(radiodj_fqdn)
@@ -114,15 +140,9 @@ def now_playing(radiodj_addr, now_playing_socket, radiodj, logger):
   if radiodj_host == active_studio:
     logger.debug("Connection from active studio!!!")
 
-#+
-#If the time to wait is  short, we return 0, if the time is short we don't really want to do do anything.
-#This is to get rid of small fillers and bumpers
-#-
-    time_to_wait = float(send_now_playing(logger, now_playing_data))
-    if time_to_wait > 0:
-      logger.debug('Going to wait for %s seconds' % time_to_wait)
-      time.sleep(time_to_wait)
-      logger.debug('Sending **CLEAR**')
+    send_now_playing(logger, now_playing_data, db)
+
+  db.close()
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #---------------------------------------------------------------------------
