@@ -15,3 +15,28 @@ CREATE TABLE `presenter_diary` (
   `metadata` varchar(256) NOT NULL,
   PRIMARY KEY (`presenter_diary_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `presenters_days` (
+  `presenter_days_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `presenter_diary_id` int(11) unsigned NOT NULL,
+  `day` int(2) unsigned NOT NULL,
+  `day_enabled` int(1) unsigned NOT NULL,
+  PRIMARY KEY (`presenter_days_id`),
+  UNIQUE KEY `uk_presenter_diary_id_day` (`presenter_diary_id`,`day`),
+  CONSTRAINT `presenters_days_ibfk_1` FOREIGN KEY (`presenter_diary_id`) REFERENCES `presenters_diary` (`presenter_diary_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Used to link shows and the days they play on';
+
+
++------------------------------------------------------------------------------------------------------------+
+| Grants for now_playing@%                                                                                   |
++------------------------------------------------------------------------------------------------------------+
+| GRANT USAGE ON *.* TO 'now_playing'@'%' IDENTIFIED BY PASSWORD '*D8700E28817FE56C1ACA49BA6EDE4032B63D6695' |
+| GRANT SELECT ON `radiodj`.`active_studio` TO 'now_playing'@'%'                                             |
+| GRANT SELECT ON `radiodj`.`songs` TO 'now_playing'@'%'                                                     |
+| GRANT SELECT ON `radiodj`.`song_type` TO 'now_playing'@'%'                                                 |
+| GRANT SELECT ON `radiodj`.`subcategory` TO 'now_playing'@'%'                                               |
+| GRANT SELECT, INSERT, UPDATE, DELETE ON `radiodj`.`presenters` TO 'now_playing'@'%'                        |
+| GRANT SELECT, INSERT, DELETE ON `radiodj`.`presenters_days` TO 'now_playing'@'%'                           |
+| GRANT SELECT, INSERT, UPDATE, DELETE ON `radiodj`.`presenters_diary` TO 'now_playing'@'%'                  |
++------------------------------------------------------------------------------------------------------------+
+

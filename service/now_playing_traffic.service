@@ -1,0 +1,16 @@
+#+
+#now_playing
+#-
+
+Description=Now Playing for traffic TA flag
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/root/now_playing/now_playing_traffic.py --logger=debug
+Restart=always
+RestartSec=60
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=multi-user.target
