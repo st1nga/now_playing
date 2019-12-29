@@ -8,7 +8,7 @@
 import MySQLdb
 import redis
 
-import ConfigParser
+import configparser
 
 #import tldextract
 
@@ -37,7 +37,7 @@ from optparse import OptionParser
 # Stops nasty message going to stdout :-) Unrequired prettyfication
 #---------------------------------------------------------------------------
 def signal_handler(sig, frame):
-  print "Exiting due to control-c"
+  print("Exiting due to control-c")
   sys.exit(0)
 
 
@@ -77,7 +77,7 @@ def connect_to_mosquitto(logger, config):
   mosquitto.on_publish = on_publish
 
 
-  mosquitto.connect(config.get("mqtt", "host"), config.get("mqtt", "port"))
+  mosquitto.connect(config.get("mqtt", "host"), int(config.get("mqtt", "port")))
   mosquitto.loop_start()
 
 #+
@@ -132,7 +132,8 @@ def on_message(client, userdata, message):
 # on_disconnect
 #---------------------------------------------------------------------------
 def on_disconnect(client, userdata, rc):
-  mqtt.Client.logger.debug("Unexpected disconnection")
+  mqtt.Client.logger.debug("Unexpected disconnection... Exiting")
+  sys.exit(1)
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # We have now playing data for the active studio
@@ -159,7 +160,7 @@ def now_playing(metadata, logger, config, db, rdis, mosquitto):
     try:
       c1.execute(sql)
       db.commit()
-    except MySQLdb.Error, err:
+    except MySQLdb.Error as err:
       logger.error("Error %d: %s" % (err.args[0], err.args[1]))
       logger.error("sql = '%s'" % sql)
 
@@ -173,7 +174,7 @@ def now_playing(metadata, logger, config, db, rdis, mosquitto):
       sql = "select pd.metadata from presenters_diary pd, presenters p where pd.presenter_id = p.presenter_id and p.name = 'override'";
       try:
         c.execute(sql)
-      except MySQLdb.Error, err:
+      except MySQLdb.Error as err:
         logger.error("Error %d: %s" % (err.args[0], err.args[1]))
         logger.error("sql = '%s'" % sql)
         sys.exit(1)
@@ -199,21 +200,22 @@ def now_playing(metadata, logger, config, db, rdis, mosquitto):
 
         try:
           c.execute(sql)
-        except MySQLdb.Error, err:
+        except MySQLdb.Error as err:
           logger.error("Error %d: %s" % (err.args[0], err.args[1]))
           logger.error("sql = '%s'" % sql)
           sys.exit(1)
 
         if not c.rowcount:
           logger.error("No rows returned. sql = '%s'" % sql)
-          metadata_to_send = "Coastfm"
+          metadata_to_send = "Coastfm^^^^"
         else:
-          metadata_to_send = c.fetchone()[0]
+          metadata_to_send = "%s^^^^" % c.fetchone()[0]
     
 #+
 #Get the metadata from redis
 #-
     redis_metadata = rdis.get("%s.metatdata" % config.get("redis", "prefix"))
+    redis_metadata = redis_metadata.decode('UTF-8')
 
     logger.debug("Got '%s' from redis" % redis_metadata)
 
@@ -230,15 +232,9 @@ def now_playing(metadata, logger, config, db, rdis, mosquitto):
       while not mosquitto.published_flag:
         time.sleep(0.1)
 
-#??????????????????????????????
-#This is were we need to do stuff to make RDS update
-# There are the follwoing type of RDS update
-# http to the RDS encoder at St Just over ethernet
-# Serial port to RDS encoder at Penzance
-# Somehow getting the data to the stream feed
-#?????????????????????????????????????
+      (result, mosquitto_id) = mosquitto.publish('now_playing_pi_feed', metadata, qos=1, retain=True)
 
-  return track_expires
+  return track_expires, radiodj_ip
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #main Main MAIN
@@ -261,7 +257,7 @@ def main():
 #+
 #Load the config file
 #-
-  config = ConfigParser.ConfigParser()
+  config = configparser.ConfigParser()
   config.read("/etc/now_playing.conf")
 
 #+
@@ -288,7 +284,7 @@ def main():
 #-
   try:
     db = MySQLdb.connect(host = config.get("sql", "host"), user = config.get("sql", "username"), passwd = config.get("sql", "password"), db = config.get("sql", "database"))
-  except MySQLdb.Error, err:
+  except MySQLdb.Error as err:
     logger.error("Error %d: %s" % (err.args[0], err.args[1]))
     sys.exit(1)
 
@@ -305,7 +301,7 @@ def main():
 #Wait for a connection
 #-
     if mqtt.Client.message != '':
-      track_finish = now_playing(mqtt.Client.message, logger, config, db, rdis, mosquitto)
+      track_finish, radiodj_ip = now_playing(mqtt.Client.message, logger, config, db, rdis, mosquitto)
       mqtt.Client.message = ''
 
       if track_finish != 0:
@@ -313,7 +309,7 @@ def main():
 
     if time.time() > track_finish and track_finish != 0:
       logger.debug("Oops!, we have over run and not got a message")
-      now_playing("^^^^^^^^^^^^%s^7^^^^" % config.get("now_playing_rds", "skip_short_track_s"), logger, config, db, rdis)
+      now_playing("^^^^^^^^^^^^%s^7^^^%s^" % (config.get("now_playing_rds", "skip_short_track_s"), radiodj_ip), logger, config, db, rdis, mosquitto)
       track_finish = 0
 
     time.sleep(0.5)
