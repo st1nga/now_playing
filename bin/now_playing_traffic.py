@@ -24,7 +24,7 @@ import MySQLdb
 import sys
 import signal
 
-import ConfigParser
+import configparser
 import logging
 from optparse import OptionParser
 
@@ -32,7 +32,7 @@ from optparse import OptionParser
 # Stops nasty message going to stdout :-) Unrequired prettyfication
 #---------------------------------------------------------------------------
 def signal_handler(sig, frame):
-  print "Exiting due to control-c"
+  print("Exiting due to control-c")
   sys.exit(0)
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -69,7 +69,7 @@ def connect_to_mosquitto(logger, config):
   mosquitto.on_message = on_message
   mosquitto.on_disconnect = on_disconnect
   mosquitto.on_publish = on_publish
-  mosquitto.connect(config.get("mqtt", "host"), config.get("mqtt", "port"))
+  mosquitto.connect(config.get("mqtt", "host"), int(config.get("mqtt", "port")))
   mosquitto.loop_start()
 
 #+
@@ -121,6 +121,14 @@ def on_disconnect(client, userdata, rc):
   mqtt.Client.logger.debug("Unexpected disconnection")
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#publish_to_mosquitto MQTT
+#---------------------------------------------------------------------------
+def publish_to_mosquitto(mosquitto, topic, data_to_send, logger):
+
+  (result, mosquitto_id) = mosquitto.publish(topic, data_to_send, qos=1, retain=True)
+  logger.debug("Topic mosquitto:'%s' updated with '%s'. Result = %s" % (topic, data_to_send, result))
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #MAIN Main main
 #---------------------------------------------------------------------------
 def main():
@@ -143,7 +151,7 @@ def main():
 #+
 #Load the config file
 #-
-  config = ConfigParser.ConfigParser()
+  config = configparser.ConfigParser()
   config.read(options.config_file)
 
 #+
@@ -169,7 +177,7 @@ def main():
 #-
   try:
     db = MySQLdb.connect(host = config.get("sql", "host"), user = config.get("sql", "username"), passwd = config.get("sql", "password"), db = config.get("sql", "database"))
-  except MySQLdb.Error, err:
+  except MySQLdb.Error as err:
     logger.error("Error %d: %s" % (err.args[0], err.args[1]))
     sys.exit(1)
 
@@ -181,7 +189,7 @@ def main():
   sql = "select id from subcategory where name = '%s'" % config.get('now_playing_traffic', 'traffic_sub_cat_name')
   try:
     c.execute(sql)
-  except MySQLdb.Error, err:
+  except MySQLdb.Error as err:
     logger.error("Error %d: %s" % (err.args[0], err.args[1]))
     sys.exit(1)
   
@@ -207,9 +215,11 @@ def main():
       path, track_id, artist, title, album, album_cover, year, track_no, disc_no, bpm, rotation_name, rotation_id, \
         duration_in_seconds, song_type, subcat_id, genre_id, radiodj_ip, track_started = mqtt.Client.message.split('^')
 
+      pi_topic = "pi/%s" % config.get('now_playing_traffic', 'ta_flag')
       if float(subcat_id) == traffic_sub_cat_id:
         logger.info("Turning on traffic flag")
-        (result, mosquitto_id) = mosquitto.publish(config.get('now_playing_traffic', 'ta_flag'), True, qos=1, retain=True)
+        publish_to_mosquitto(mosquitto, config.get('now_playing_traffic', 'ta_flag'), True, logger)
+        publish_to_mosquitto(mosquitto, pi_topic, "On", logger)
         while not mosquitto.published_flag:
           time.sleep(0.1)
 
@@ -222,7 +232,9 @@ def main():
         if traffic_flag == True:
           logger.info("Turning off traffic flag")
           traffic_flag = False
-          (result, mosquitto_id) = mosquitto.publish(config.get('now_playing_traffic', 'ta_flag'), False, qos=1, retain=True)
+#          (result, mosquitto_id) = mosquitto.publish(config.get('now_playing_traffic', 'ta_flag'), False, qos=1, retain=True)
+          publish_to_mosquitto(mosquitto, config.get('now_playing_traffic', 'ta_flag'), False, logger)
+          publish_to_mosquitto(mosquitto, pi_topic, "Off", logger)
           while not mosquitto.published_flag:
             time.sleep(0.1)
 
@@ -232,7 +244,9 @@ def main():
         traffic_finish = 0
         logger.info("Turning off traffic flag")
         traffic_flag = False
-        (result, mosquitto_id) = mosquitto.publish(config.get('now_playing_traffic', 'ta_flag'), False, qos=1, retain=True)
+#        (result, mosquitto_id) = mosquitto.publish(config.get('now_playing_traffic', 'ta_flag'), False, qos=1, retain=True)
+        publish_to_mosquitto(mosquitto, config.get('now_playing_traffic', 'ta_flag'), False, logger)
+        publish_to_mosquitto(mosquitto, pi_topic, "Off", logger)
         while not mosquitto.published_flag:
           time.sleep(0.1)
 
