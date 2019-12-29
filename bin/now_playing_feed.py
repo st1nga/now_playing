@@ -7,9 +7,10 @@
 
 import MySQLdb
 
-import ConfigParser
+import configparser
 
 import tldextract
+import platform
 
 import paho.mqtt.client as mqtt
 mqtt.Client.connected_flag = False
@@ -32,7 +33,7 @@ from optparse import OptionParser
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #---------------------------------------------------------------------------
 def signal_handler(sig, frame):
-  print "Exiting due to control-c"
+  print("Exiting due to control-c")
   sys.exit(0)
 
 
@@ -85,7 +86,7 @@ def connect_to_mosquitto(logger, config):
   mosquitto.username_pw_set(username = config.get("mqtt", "username"), password = config.get("mqtt", "password"))
   mosquitto.on_connect = on_connect
   mosquitto.on_publish = on_publish
-  mosquitto.connect(config.get("mqtt", "host"), config.get("mqtt", "port"))
+  mosquitto.connect(config.get("mqtt", "host"), int(config.get("mqtt", "port")))
   mosquitto.loop_start()
 
 #+
@@ -146,7 +147,7 @@ def now_playing(radiodj_addr, now_playing_socket, radiodj, logger, config):
   while True:
     recv_data = radiodj.recv(1024)
     if recv_data:
-      now_playing_data += recv_data
+      now_playing_data += recv_data.decode('UTF-8')
     else:
       break
 
@@ -158,7 +159,7 @@ def now_playing(radiodj_addr, now_playing_socket, radiodj, logger, config):
 #-
   try:
     db = MySQLdb.connect(host = config.get("sql", "host"), user = config.get("sql", "username"), passwd = config.get("sql", "password"), db = config.get("sql", "database"))
-  except MySQLdb.Error, err:
+  except MySQLdb.Error as err:
     logger.error("Error %d: %s" % (err.args[0], err.args[1]))
     sys.exit(1)
 
@@ -167,7 +168,7 @@ def now_playing(radiodj_addr, now_playing_socket, radiodj, logger, config):
   sql = "select studio from active_studio order by id desc limit 1"
   try:
     c.execute(sql)
-  except MySQLdb.Error, err:
+  except MySQLdb.Error as err:
     logger.error("Error %d: %s" % (err.args[0], err.args[1]))
     sys.exit(1)
 
@@ -206,14 +207,14 @@ def main():
 #+
 #Load the config file
 #-
-  config = ConfigParser.ConfigParser()
+  config = configparser.ConfigParser()
   config.read("/etc/now_playing.conf")
 
 #+
 #Setup custom logging
 #-
   logger = custom_logger(config.get('now_playing_feed', 'logger_name'), options.logger_level, config, options.log_to_screen)
-  logger.info("Hello world!")
+  logger.info("Hello world! Python version = '%s'" % platform.python_version())
 
 #+
 #Catch control-c
@@ -226,7 +227,7 @@ def main():
 
   try:
     now_playing_socket.bind((config.get("now_playing_feed", "listen_host"), int(config.get("now_playing_feed", "port"))))
-  except socket.error, err:
+  except socket.error as err:
     logger.error("Error %s:%d: %d: %s" % (config.get("now_playing_feed", "listen_host"), int(config.get("now_playing_feed", "port")), err.args[0], err.args[1]))
     sys.exit(1)
 
