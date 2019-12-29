@@ -18,5 +18,5 @@ Waits for another message from mosquitto for 90 seconds and then turns it off.
 ## now_playing_presenter_info.py
 Listens to mosquitto:now_playing_presenter_info and write data to websockets pi/now pi/next and pi/prev.
 The data it sends is html so that the web page can just display the html.
-##Notes
+## Notes
 pip install tldextract
