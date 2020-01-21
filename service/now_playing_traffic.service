@@ -1,16 +1,18 @@
 #+
 #now_playing
 #-
-
+[Unit]
 Description=Now Playing for traffic TA flag
 After=network-online.target
+StartLimitIntervalSec=0
 
 [Service]
+User=coastfm
+Group=coastfm
 Type=simple
-ExecStart=/root/now_playing/now_playing_traffic.py --logger=debug
+ExecStart=/home/coastfm/.pyenv/shims/python3.8 /home/coastfm/now_playing/bin/now_playing_traffic.py --logger=debug
 Restart=always
 RestartSec=60
-StartLimitIntervalSec=0
 
 [Install]
 WantedBy=multi-user.target
