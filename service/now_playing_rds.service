@@ -2,15 +2,18 @@
 #now_playing
 #-
 
+[Unit]
 Description=Now Playing for RDS
 After=network-online.target
+StartLimitIntervalSec=0
 
 [Service]
+User=coastfm
+Group=coastfm
 Type=simple
-ExecStart=/root/now_playing/now_playing_rds.py --logger=debug
+ExecStart=/home/coastfm/.pyenv/shims/python3.8 /home/coastfm/now_playing/bin/now_playing_rds.py --logger=debug
 Restart=always
 RestartSec=60
-StartLimitIntervalSec=0
 
 [Install]
 WantedBy=multi-user.target
