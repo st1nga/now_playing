@@ -21,5 +21,9 @@ The data it sends is html so that the web page can just display the html.
 ## np_metadata_to_icecast.py
 Listens to mosquitto:now_playing_rds
 Squirts data to icecast2
+
+## boilerplate text
+RadioDJ uses the following to send data
+$path$^$track_id$^$artist$^$title$^$album$^$album_cover$^$year$^$track_no$^$disc_no$^$bpm$^$rotation_name$^$rotation_id$^$durationinSeconds$^$track-type$^$subcat-id$^$genre-id$
 ## Notes
 pip install tldextract
