@@ -1,0 +1,19 @@
+#+
+#now_playing
+#-
+
+[Unit]
+Description=Now Playing for presenter info
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+User=coastfm
+Group=coastfm
+Type=simple
+ExecStart=/home/coastfm/.pyenv/shims/python3.8 /home/coastfm/now_playing/bin/now_playing_presenter_info.py --logger=debug
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

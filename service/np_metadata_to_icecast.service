@@ -1,0 +1,19 @@
+#+
+#now_playing
+#-
+
+[Unit]
+Description=metatdata to icecast
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+User=coastfm
+Group=coastfm
+Type=simple
+ExecStart=/home/coastfm/.pyenv/shims/python3.8 /home/coastfm/now_playing/bin/np_metadata_to_icecast.py --logger=debug
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

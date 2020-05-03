@@ -1,11 +1,15 @@
+#!/home/coastfm/.pyenv/versions/3.8.0/bin/python3.8
 #!/usr/bin/env python
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Listen to now playing info, if from active studio forward to relevent places
 #===========================================================================
 # Modifications
+# 02-May-2020 mikep
+# Added a select to get some details rather than coming from the boilerplate
 #---------------------------------------------------------------------------
 
 import MySQLdb
+#import mysql.connector
 
 import configparser
 
@@ -119,6 +123,30 @@ def publish_to_mosquitto(mosquitto, topic, metadata_to_send, logger, config):
 #---------------------------------------------------------------------------
 def send_now_playing(logger, now_playing_data, db, config, radiodj_ip):
 
+  logger.debug("In send_now_playing")
+  c = db.cursor(MySQLdb.cursors.DictCursor)
+
+  path, track_id, artist, title, album, album_cover, year, track_no, disc_no, bpm, rotation_name, rotation_id, \
+    duration_in_seconds, song_type, subcat_id, genre_id = now_playing_data.split('^')
+
+  sql = "select path,id,artist,title,album,album_art,year,track_no,disc_no,bpm,duration,song_type from songs where id=%s" % track_id
+  logger.debug(sql)
+  try:
+    c.execute(sql)
+  except MySQLdb.Error as err:
+    logger.error("Error %d: %s" % (err.args[0], err.args[1]))
+    sys.exit(1)
+
+  row = c.fetchone()
+  np_data = ("%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s^%s" % \
+    (row['path'], row['id'], row['artist'], row['title'], row['album'], \
+     row['album_art'], row['year'], row['track_no'], row['disc_no'], row['bpm'], \
+     rotation_name, rotation_id, row['duration'], row['song_type'], subcat_id, genre_id))
+  logger.debug(np_data)
+  logger.debug(now_playing_data)
+
+#$path$^$track_id$^$artist$^$title$^$album$^$album_cover$^$year$^$track_no$^$disc_no$^$bpm$^$rotation_name$^$rotation_id$^$durationinSeconds$^$track-type$^$subcat-id$^$genre-id$
+
   logger.debug("We got: %s" % (now_playing_data))
   now_playing_data = "%s^%s^%s" % (now_playing_data, radiodj_ip, time.time())
 
@@ -184,6 +212,8 @@ def now_playing(radiodj_addr, now_playing_socket, radiodj, logger, config):
   if radiodj_host == active_studio:
     logger.debug("Connection from active studio!!!")
     send_now_playing(logger, now_playing_data.rstrip(), db, config, radiodj_ip)
+  else:
+    logger.debug("Compare This=%s:Active=%s" % (radiodj_host, active_studio))
 
   db.close()
 
@@ -231,7 +261,7 @@ def main():
     logger.error("Error %s:%d: %d: %s" % (config.get("now_playing_feed", "listen_host"), int(config.get("now_playing_feed", "port")), err.args[0], err.args[1]))
     sys.exit(1)
 
-  now_playing_socket.listen(10)
+  now_playing_socket.listen(20)
 
 #+
 #Loop forever

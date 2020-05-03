@@ -121,6 +121,7 @@ def on_message(client, userdata, message):
 #---------------------------------------------------------------------------
 def on_disconnect(client, userdata, rc):
   mqtt.Client.logger.debug("Unexpected disconnection")
+  sys.exit(1)
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #MAIN Main main

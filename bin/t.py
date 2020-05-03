@@ -6,8 +6,6 @@
 # Also show last 5 tracks played.
 #===========================================================================
 # Modifications
-# 04-Mar-2020 mikep
-# Added mosquitto 'pi/now_short'
 #---------------------------------------------------------------------------
 
 import paho.mqtt.client as mqtt
@@ -144,12 +142,13 @@ def get_next_track(radiodj_ip, logger, db):
   entry = 0
   params = {'auth':12345, 'arg':entry}
   url = "http://%s:7000/pitem" % radiodj_ip
+  logger.debug ("URL = %s" % url)
   r = requests.get(url = url, params = params)
   if r.status_code  == 200:
     xml = lxml.html.fromstring(r.text)
     logger.debug("song type = %s" % xml.xpath('//tracktype')[0].text_content())
 
-    while xml.xpath('//tracktype')[0].text_content() != 'Music' or r.status_code != 200:
+    while xml.xpath('//tracktype')[0].text_content() != 'Music':
       entry += 1
       params = {'auth':12345, 'arg':entry}
       r = requests.get(url = url, params = params)
@@ -187,7 +186,7 @@ def get_next_track(radiodj_ip, logger, db):
   return artist, title, album, composer, publisher, copyright, year, track_no, disc_no, comments, original_artist, id
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#Build the next to play html
+#Build the now next to play html
 #---------------------------------------------------------------------------
 def build_next(logger, radiodj_ip, db):
 
@@ -217,19 +216,18 @@ def build_next(logger, radiodj_ip, db):
     params = {'auth':12345, 'arg':0}
 
     html = "<table>"
-    html += "<tr><td width='95px' align='right'>Title:</td><td>%s</td></tr>" % title
-    html += "<tr><td width='95px' align='right'>Artist:</td><td>%s</td></tr>" % artist
-    html += "<tr><td width='95px' align='right'>Album:</td><td>%s</td></tr>" % album
-    html += "<tr><td width='95px' align='right'>Composer:</td><td>%s</td></tr>" % composer
-    html += "<tr><td width='95px' align='right'>Publisher:</td><td>%s</td></tr>" % publisher
-    html += "<tr><td width='95px' align='right'>Copyright:</td><td>%s</td></tr>" % copyright
-    html += "<tr><td width='95px' align='right'>Year:</td><td>%s</td></tr>" % year
-    html += "<tr><td width='95px' align='right'>Track/CD:<td>%s/%s</td></tr>" % (track_no, disc_no)
-    html += "<tr><td width='95px' align='right'>Year made #1:</td><td>%s</td></tr>" % year_made_number_1
-    html += "<tr><td width='95px' align='right'>Original Artist:</td><td>%s</td></tr>" % original_artist
-    html += "<tr><td width='95px' align='right'>Comments:</td><td>%s</td></tr>" % comments
+    html += "<tr><td align='right'>Title:</td><td>%s</td></tr>" % title
+    html += "<tr><td align='right'>Artist:</td><td>%s</td></tr>" % artist
+    html += "<tr><td align='right'>Album:</td><td>%s</td></tr>" % album
+    html += "<tr><td align='right'>Composer:</td><td>%s</td></tr>" % composer
+    html += "<tr><td align='right'>Publisher:</td><td>%s</td></tr>" % publisher
+    html += "<tr><td align='right'>Copyright:</td><td>%s</td></tr>" % copyright
+    html += "<tr><td align='right'>Year:</td><td>%s</td></tr>" % year
+    html += "<tr><td align='right'>Track/CD:<td>%s/%s</td></tr>" % (track_no, disc_no)
+    html += "<tr><td align='right'>Year made #1:</td><td>%s</td></tr>" % year_made_number_1
+    html += "<tr><td align='right'>Original Artist:</td><td>%s</td></tr>" % original_artist
+    html += "<tr><td align='right'>Comments:</td><td>%s</td></tr>" % comments
     html += "</table>"
-    html += "<a target='_blank' href=\"https://www.google.com/search?q=%s %s\"><img border='0' alt='Search' src='search.jpg' width='150'></a>" % (title, artist)
 
   return html
   
@@ -257,19 +255,18 @@ def build_now(logger, metadata, db):
     original_artist, composer, publisher, copyright, comments, year_made_number_1 = c.fetchone()
 
     html = "<table>"
-    html += "<tr><td width='95px' align='right'>Title:</td><td>%s</td></tr>" % title
-    html += "<tr><td width='95px' align='right'>Artist:</td><td>%s</td></tr>" % artist
-    html += "<tr><td width='95px' align='right'>Album:</td><td>%s</td></tr>" % album
-    html += "<tr><td width='95px' align='right'>Composer:</td><td>%s</td></tr>" % composer
-    html += "<tr><td width='95px' align='right'>Publisher:</td><td>%s</td></tr>"  % publisher
-    html += "<tr><td width='95px' align='right'>Copyright:</td><td>%s</td></tr>" % copyright
-    html += "<tr><td width='95px' align='right'>Year:</td><td>%s</td></tr>" % year
-    html += "<tr><td width='95px' align='right'>Track/CD:<td>%s/%s</td></tr>" % (track_no, disc_no)
-    html += "<tr><td width='95px' align='right'>Year made #1:</td><td>%s</td></tr>" % year_made_number_1
-    html += "<tr><td width='95px' align='right'>Original Artist:</td><td>%s</td></tr>" % original_artist
-    html += "<tr><td width='95px' align='right'>comments:</td><td>%s</td></tr>" % comments
+    html += "<tr><td align='right'>Title:</td><td>%s</td></tr>" % title
+    html += "<tr><td align='right'>Artist:</td><td>%s</td></tr>" % artist
+    html += "<tr><td align='right'>Album:</td><td>%s</td></tr>" % album
+    html += "<tr><td align='right'>Composer:</td><td>%s</td></tr>" % composer
+    html += "<tr><td align='right'>Publisher:</td><td>%s</td></tr>"  % publisher
+    html += "<tr><td align='right'>Copyright:</td><td>%s</td></tr>" % copyright
+    html += "<tr><td align='right'>Year:</td><td>%s</td></tr>" % year
+    html += "<tr><td align='right'>Track/CD:<td>%s/%s</td></tr>" % (track_no, disc_no)
+    html += "<tr><td align='right'>Year made #1:</td><td>%s</td></tr>" % year_made_number_1
+    html += "<tr><td align='right'>Original Artist:</td><td>%s</td></tr>" % original_artist
+    html += "<tr><td align='right'>comments:</td><td>%s</td></tr>" % comments
     html += "</table>"
-    html += "<a target='_blank' href=\"https://www.google.com/search?q=%s %s\"><img border='0' alt='Search' src='search.jpg' width='150'></a>" % (title, artist)
   else:
     html = ""
 
@@ -289,9 +286,9 @@ def build_last_5(logger, db):
 
   logger.debug("In build_last_5")
 
-  sql = "select time(date_played), title, artist from history where active = 1 and song_type = 0 and date_played = date_played order by date_played desc limit 2,7"
+  sql = "select SQL_NO_CACHE time(date_played), title, artist from history where active = 1 and song_type = 0 and date_played = date_played order by date_played desc limit 2,6"
+  logger.debug(sql)
   c = db.cursor()
-  c.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
   try:
     c.execute(sql)
   except MySQLdb.Error as err:
@@ -302,11 +299,12 @@ def build_last_5(logger, db):
   html = "<ul>"
   row = c.fetchone()
   while row is not None:
-    html += "<li>%s, %s <b>-</b> %s</li>" % (row[0], row[1], row[2])
+    logger.debug(row[1])
+    html += "<li>At %s, %s <b>by</b> %s</li>" % (row[0], row[1], row[2])
     row = c.fetchone()
 
   html += "</ul>"
-  c.execute("SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+  logger.debug(html)
   return html
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -352,10 +350,17 @@ def main():
 #-
   try:
     db = MySQLdb.connect(host = config.get("sql", "host"), user = config.get("sql", "username"), passwd = config.get("sql", "password"), db = config.get("sql", "database"))
-#    db.autocommit(True)
+    db.autocommit(True)
   except MySQLdb.Error as err:
     logger.error("Error %d: %s" % (err.args[0], err.args[1]))
     sys.exit(1)
+
+
+
+  while True:
+    print( build_last_5(logger, db))
+    time.sleep(60)
+  sys.exit(0)
 
 #+
 #Connect to mosquitto, the MQTT broker
@@ -385,10 +390,8 @@ def main():
       if int(song_type) == 0:
         now_html = build_now(logger, mqtt.Client.message, db)
         publish_to_mosquitto(mosquitto, 'pi/now', now_html, logger)
-        publish_to_mosquitto(mosquitto, 'pi/now_short', "%s:%s - %s" % (duration_in_seconds, title, artist), logger)
       else:
         publish_to_mosquitto(mosquitto, 'pi/now', '', logger)
-        publish_to_mosquitto(mosquitto, 'pi/now_short', "0:", logger)
 
       mqtt.Client.message = ""
 
@@ -398,4 +401,5 @@ def main():
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #---------------------------------------------------------------------------
 if __name__ == "__main__":
+#    exit()
     main()
